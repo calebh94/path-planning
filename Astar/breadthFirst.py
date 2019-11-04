@@ -1,7 +1,6 @@
 # Set of Path Planning algorithms with examples from (https://www.redblobgames.com/pathfinding)
-from implementation import *
-import timeit
-from algorithms import *
+from Astar.implementation import *
+from Astar.algorithms import *
 
 # TIME THE PROCESSES AND THE NUMBER OF ITERATIONS UNTIL SOLUTION
 
