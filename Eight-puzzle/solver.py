@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 
 def find(l, elem):
@@ -86,7 +87,7 @@ class Puzzle:
     def h(self, start, goal):
         """ Calculates the different between the given puzzles """
         # Choose Heuristic
-        return self.h2(start, goal)
+        return self.h1(start, goal)
 
     def h1(self, start, goal):
         """ Heuristic - Number of Misplaced Tiles """
@@ -124,7 +125,7 @@ class Puzzle:
             goal = [['1','2','3'],['8','_','4'],['7','6','5']] # GOAL STATE A
         elif type == 'homework':
             start = [['5', '4', '_'], ['6', '1', '8'], ['7', '3', '2']]
-            goal = [['3', '1', '2'], ['6', '4', '5'], ['7', '_', '8']]  # B
+            goal = [['_', '1', '2'], ['3', '4', '5'], ['6', '7', '8']]  # GOAL STATE B
         elif type == "random":
             random_start = np.random.choice(['_','1','2','3','4','5','6','7','8'],size=9, replace=False)
             (a, b, c) = np.split(random_start, 3)
@@ -222,6 +223,8 @@ class Puzzle:
             group = 'B'
         return group
 
-
+t1 = time.time()
 puz = Puzzle(3)
 puz.process('homework')
+t2 = time.time()
+print('Time taken: %.2f seconds' % (t2-t1))
