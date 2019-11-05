@@ -86,7 +86,7 @@ class Puzzle:
     def h(self, start, goal):
         """ Calculates the different between the given puzzles """
         # Choose Heuristic
-        return self.h1(start, goal)
+        return self.h2(start, goal)
 
     def h1(self, start, goal):
         """ Heuristic - Number of Misplaced Tiles """
@@ -124,7 +124,7 @@ class Puzzle:
             goal = [['1','2','3'],['8','_','4'],['7','6','5']] # GOAL STATE A
         elif type == 'homework':
             start = [['5', '4', '_'], ['6', '1', '8'], ['7', '3', '2']]
-            goal = [['_', '1', '2'], ['3', '4', '5'], ['6', '7', '8']]  # B
+            goal = [['3', '1', '2'], ['6', '4', '5'], ['7', '_', '8']]  # B
         elif type == "random":
             random_start = np.random.choice(['_','1','2','3','4','5','6','7','8'],size=9, replace=False)
             (a, b, c) = np.split(random_start, 3)
@@ -141,7 +141,7 @@ class Puzzle:
             print('The start puzzle are not in the same state set!  Impossible to solve!')
             return 0
 
-        self.f_limit = 100
+        self.f_limit = 500
 
         start = Node(start, 0, 0)
         start.fval = self.f(start, goal)
@@ -172,10 +172,16 @@ class Puzzle:
             if self.current_cost == 0:
                 break
             for i in cur.generate_child():
-                i.fval = self.f(i, goal)
-                # Pruning
-                if i.fval <= self.f_limit:
-                    self.open.append(i)
+                # If node already seen then throw away
+                repeat = False
+                for elem in self.closed:
+                    if elem.data == i.data:
+                        repeat = True
+                if repeat is False:
+                    i.fval = self.f(i, goal)
+                    # Pruning
+                    if i.fval <= self.f_limit:
+                        self.open.append(i)
             self.closed.append(cur)
             del self.open[0]
 
