@@ -49,7 +49,7 @@ class GridWorldMDP:
         return self._reward_grid
 
     def run_value_iterations(self, discount=1.0,
-                             iterations=10):
+                             iterations=10, epsilon=0.001):
         utility_grids, policy_grids = self._init_utility_policy_storage(iterations)
 
         utility_grid = np.zeros_like(self._reward_grid)
@@ -57,6 +57,17 @@ class GridWorldMDP:
             utility_grid = self._value_iteration(utility_grid=utility_grid)
             policy_grids[:, :, i] = self.best_policy(utility_grid)
             utility_grids[:, :, i] = utility_grid
+
+            # delta = 0
+            # if i > 1:
+            #     utility_delta = abs(utility_grids[:,:,i] - utility_grids[:,:,i-1])
+            #     delta_i = np.max(utility_delta)
+            #     if delta_i > delta:
+            #         delta = delta_i
+            #     if delta < epsilon*(1-discount)/discount:
+            #         print('Converged at iteration ' + str(i))
+            #         return policy_grids, utility_grids
+
         return policy_grids, utility_grids
 
     def run_policy_iterations(self, discount=1.0,
