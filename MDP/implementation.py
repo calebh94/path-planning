@@ -12,6 +12,7 @@ class BoardState:
         self.walls = []  # indices of wall locations
         self.dist = []  # w, disturbance
         self.a = []  # actions
+        self.specials = []
         self.board = np.empty([self.m, self.n], dtype=str)  # {row, col}
         self.values = np.empty([self.m, self.n])
         self.dist = np.zeros([self.m, self.n])
@@ -23,6 +24,9 @@ class BoardState:
         self.values.fill(init_value)
         self.board.fill('O')
         # print(self.values)
+
+    def add_specials(self, specials):
+        self.specials = specials
 
     def add_actions(self, act_set):
         self.a = act_set
@@ -66,14 +70,16 @@ class BoardState:
         else:
             return states
 
-    def reward(self, indices):
+    def reward(self, indices, special_reward=-1):
         x = indices[0]
         y = indices[1]
         reward = 0
-        if (x,y) == self.goal:
+        if [x,y] == self.goal:
             reward = 10
         elif self.board[x,y] == 'X':
             reward = -10
+        elif [x,y] in self.specials:
+            reward = special_reward
         else:
             reward = -1
         return reward
@@ -98,7 +104,7 @@ class BoardState:
         (states, inds) = self.get_states(location, inds=True)
         probs = []
         values = []
-        for i in range(0,len(states)):
+        for i in range(0,4):
             if i in inds:
                 continue
 
@@ -117,17 +123,22 @@ class BoardState:
                 value += self.values[states[t][0],states[t][1]]*probs[t]
 
             values.append(value)
-            return values
+        return values
 
     def max_value(self, start):
+        if [start[0],start[1]] == self.goal:
+            return 0
         values = []
         # for act in self.a:
             # sum over all possibilities
             # Cases, Action = dist, +90 from dist, -90 from dist, -180 from dist
         values = self.get_values(start)
+        if len(values) < 1:
+            print('stop')
+            values = self.get_values(start)
         return max(values)
 
-    def value_iteration(self, start, goal, discount=1.00, epsilon=0.01, steps=1000):
+    def value_iteration(self, start, goal, discount=1.00, epsilon=0.01, steps=1000, extra_reward = 0.0):
         self.start = [start[0],start[1]]
         self.goal = [goal[0],goal[1]]
         k = 0
@@ -136,6 +147,7 @@ class BoardState:
         new_states_new = []
         delta = 0
         while k < steps:
+            delta = 0
             # [update_list.append(x) for x in new_states if x not in update_list]
             new_states_new = []
             for p in range(0, len(new_states)):
@@ -151,16 +163,22 @@ class BoardState:
                     continue
                 else:
                     new_states.append(new_states_new[h])
+            delta = 0
             for elem in update_list:
                 prev_val = self.values[elem[0],elem[1]]
-                self.values[elem[0],elem[1]] += self.reward(elem) + \
-                discount*self.max_value(elem)
+
+                if elem == [start[0],start[1]]:
+                    self.values[elem[0], elem[1]] = self.reward(elem)
+                else:
+                    self.values[elem[0],elem[1]] = self.reward(elem, extra_reward) + discount*self.max_value(elem)
 
                 if abs(self.values[elem[0],elem[1]] - prev_val) > delta:
                     delta = abs(self.values[elem[0],elem[1]] - prev_val)
 
-                if delta < epsilon*(1-discount)/discount:
-                    break
+            if delta < epsilon*(1-discount)/discount:
+                break
+            print(k)
+            print(self.values.round())
             k += 1
         print('Stopped at iteration ' + str(k))
         print(self.values.round())
@@ -184,6 +202,17 @@ if __name__ == "__main__":
     # mdp_board.search((7,1),(2,8))
     start = (6,0)  # (7,1)
     goal = (1,7)   # (2,8)
-    mdp_board.value_iteration(start, goal, discount=0.95, epsilon=0.001, steps=100)
+    # mdp_board.value_iteration(start, goal, discount=0.95, epsilon=0.001, steps=500)
+
+    # Part b)
+    mdp_board2 = mdp_board
+    mdp_board2.add_specials([[3,2],[0,4],[1,4]])
+    # mdp_board2.value_iteration(start, goal, discount=0.95, epsilon=0.001, steps=500, extra_reward=100.0)
+    mdp_board2.value_iteration(start, goal, discount=0.95, epsilon=0.001, steps=500, extra_reward=-3.0)
+
+    
+
+    # SIMULAITON!  RUN POLICY!  NEED TO GET POLICY FIRST THEN!
+
 
 
