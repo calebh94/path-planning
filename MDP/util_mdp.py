@@ -25,11 +25,15 @@ class GridWorldMDP:
         self._reward_grid = reward_grid
         self._terminal_mask = terminal_mask
         self._obstacle_mask = obstacle_mask
+        self._disturbances = disturbances
         self._T = self._create_transition_matrix(
             action_probabilities,
             no_action_probability,
             disturbances,
             obstacle_mask)
+        (a,b,c,d,e,f) = self._T.shape
+        self._T2 = np.empty([a,b,c,e,f])
+
 
 
     @property
@@ -72,16 +76,16 @@ class GridWorldMDP:
             utility_grids[:, :, i] = utility_grid
         return policy_grids, utility_grids
 
-    def generate_experience(self, current_state_idx, action_idx):
-        sr, sc = self.grid_indices_to_coordinates(current_state_idx)
-        next_state_probs = self._T[sr, sc, action_idx, :, :].flatten()
-
-        next_state_idx = np.random.choice(np.arange(next_state_probs.size),
-                                          p=next_state_probs)
-
-        return (next_state_idx,
-                self._reward_grid.flatten()[next_state_idx],
-                self._terminal_mask.flatten()[next_state_idx])
+    # def generate_experience(self, current_state_idx, action_idx):
+    #     sr, sc = self.grid_indices_to_coordinates(current_state_idx)
+    #     next_state_probs = self._T[sr, sc, action_idx, :, :].flatten()
+    #
+    #     next_state_idx = np.random.choice(np.arange(next_state_probs.size),
+    #                                       p=next_state_probs)
+    #
+    #     return (next_state_idx,
+    #             self._reward_grid.flatten()[next_state_idx],
+    #             self._terminal_mask.flatten()[next_state_idx])
 
     def grid_indices_to_coordinates(self, indices=None):
         if indices is None:
@@ -97,7 +101,7 @@ class GridWorldMDP:
 
     def best_policy(self, utility_grid):
         M, N = self.shape
-        return np.argmax((utility_grid.reshape((1, 1, 1, M, N)) * self._T)
+        return np.argmax((utility_grid.reshape((1, 1, 1, M, N)) * self._T2)
                          .sum(axis=-1).sum(axis=-1), axis=2)
 
     def _init_utility_policy_storage(self, depth):
@@ -113,39 +117,38 @@ class GridWorldMDP:
                                   obstacle_mask):
         M, N = self.shape
 
-        T = np.zeros((M, N, self._num_actions, M, N))
+        T = np.zeros((M, N, self._num_actions, self._num_actions, M, N))   # M,N,A,D,M,N
 
         r0, c0 = self.grid_indices_to_coordinates()
 
-        T[r0, c0, :, r0, c0] += no_action_probability
+        T[r0, c0, :, :, r0, c0] += no_action_probability
 
         for action in range(self._num_actions):
             # offset = disturbances[r0,c0]
             # for case in range(0,4):
-            for i in range(0,len(r0)):
-                for j in range(0, len(c0)):
-                    direction = (action + disturbances[r0[i]][c0[j]]) % self._num_actions
-                    P = action_probabilities[direction][1]
+            # for i in range(0,len(r0)):
+            #     for j in range(0, len(c0)):
+            #         direction = (action + disturbances[r0[i]][c0[j]]) % self._num_actions
+            #         P = action_probabilities[direction][1]
+            for disturb in range(self._num_actions):
+                case = (action - disturb) % self._num_actions
+                probs = action_probabilities[case][1]
+                for direction in range(self._num_actions):
+                    step = (case + direction) % self._num_actions
+                    dr, dc = self._direction_deltas[step]
+                    r1 = np.clip(r0 + dr, 0, M - 1)
+                    c1 = np.clip(c0 + dc, 0, N - 1)
+                    # rs = r0[i]+dr
+                    # cs = c0[j]+dc
+                    # if rs in r1 and cs in c1:
+                    temp_mask = obstacle_mask[r1, c1].flatten()
+                    r1[temp_mask] = r0[temp_mask]
+                    c1[temp_mask] = c0[temp_mask]
 
-                    for case in range(0,4):
-                        step = (case + direction) % self._num_actions
-                        dr, dc = self._direction_deltas[step]
-                        r1 = np.clip(r0 + dr, 0, M - 1)
-                        c1 = np.clip(c0 + dc, 0, N - 1)
-
-                        rs = r0[i]+dr
-                        cs = c0[j]+dc
-                        if rs in r1 and cs in c1:
-                            # temp_mask = obstacle_mask[r1, c1].flatten()
-                            # r1[temp_mask] = r0[temp_mask]
-                            # c1[temp_mask] = c0[temp_mask]
-
-                            T[r0[i], c0[j], action, rs, cs] += P[step]
-
-
+                    T[r0, c0, action, disturb, r1, c1] += probs[step]
 
         terminal_locs = np.where(self._terminal_mask.flatten())[0]
-        T[r0[terminal_locs], c0[terminal_locs], :, :, :] = 0
+        T[r0[terminal_locs], c0[terminal_locs], :, :, :, :] = 0
         return T
 
     def _value_iteration(self, utility_grid, discount=1.0):
@@ -166,7 +169,7 @@ class GridWorldMDP:
 
         utility_grid = (
             self._reward_grid +
-            discount * ((utility_grid.reshape((1, 1, 1, M, N)) * self._T)
+            discount * ((utility_grid.reshape((1, 1, 1, M, N)) * self._T2)
                         .sum(axis=-1).sum(axis=-1))[r, c, policy_grid.flatten()]
             .reshape(self.shape)
         )
@@ -179,9 +182,17 @@ class GridWorldMDP:
         if self._terminal_mask[loc]:
             return self._reward_grid[loc]
         row, col = loc
+        # Need to remove all probabilities from T Matrix as I calculate utility
+        dist = self._disturbances[row][col]
+        for w in range(0,4):
+            if w == dist:
+                continue
+            else:
+                (self._T[row, col, :, w, :, :]).fill(0)
+        self._T2[row, col, :, :, :] = self._T[row, col, :,dist,:,:]
         return np.max(
             discount * np.sum(
-                np.sum(self._T[row, col, :, :, :] * utility_grid,
+                np.sum(self._T[row, col, :, dist, :, :] * utility_grid,
                        axis=-1),
                 axis=-1)
         ) + self._reward_grid[loc]
