@@ -32,7 +32,7 @@ class GridWorldMDP:
             disturbances,
             obstacle_mask)
         (a,b,c,d,e,f) = self._T.shape
-        self._T2 = np.empty([a,b,c,e,f])
+        self._T2 = np.zeros((a,b,c,e,f), dtype=float)
 
 
 
@@ -145,7 +145,7 @@ class GridWorldMDP:
                 case = (action - disturb) % self._num_actions
                 probs = action_probabilities[case][1]
                 for direction in range(self._num_actions):
-                    step = (case + direction) % self._num_actions
+                    step = (action + direction) % self._num_actions
                     dr, dc = self._direction_deltas[step]
                     r1 = np.clip(r0 + dr, 0, M - 1)
                     c1 = np.clip(c0 + dc, 0, N - 1)
@@ -156,10 +156,16 @@ class GridWorldMDP:
                     r1[temp_mask] = r0[temp_mask]
                     c1[temp_mask] = c0[temp_mask]
 
-                    T[r0, c0, action, disturb, r1, c1] += probs[step]
+                    index = (case+direction) % self._num_actions
+                    T[r0, c0, action, disturb, r1, c1] += probs[index]
 
         terminal_locs = np.where(self._terminal_mask.flatten())[0]
         T[r0[terminal_locs], c0[terminal_locs], :, :, :, :] = 0
+
+        # Fixing matrix
+        T[6,0,0,:,:,:] = 0
+        T[6, 0, 0, :, 5, 0] = 1.0
+        T[6, 0, 1, :, 6, 1] = 1.0
         return T
 
     def _value_iteration(self, utility_grid, discount=1.0):
@@ -247,4 +253,44 @@ class GridWorldMDP:
         plt.yticks(np.arange(0, policy_grid.shape[0] - 0.5, tick_step))
         plt.xlim([-0.5, policy_grid.shape[0]-0.5])
         plt.xlim([-0.5, policy_grid.shape[1]-0.5])
+
+
+    def sim_best_policy(self, start, goal, traps, best_policy, iterations=50):
+        print('todo')
+        cnt = 0
+        successes = 0
+        cases = [(-1, 0), (0, 1), (1, 0), (0, -1), (0, 0)]
+        while cnt < iterations:
+            # print('coding;')
+            current = start
+            while current not in traps and current != goal:
+                if current is start:
+                    probs = [0.5,0.5,0,0,0]
+                else:
+                    # print('working')
+                    opt_action = int(best_policy[current[0], current[1]])
+                    probs = np.empty([len(cases)])
+                    for i in range(len(probs)):
+                        if 0 <= cases[i][0] + current[0] < self.shape[0] and 0 <= cases[i][1] + current[1] < self.shape[1]:
+                            probs[i] = self._T2[current[0], current[1], opt_action,
+                                                cases[i][0] + current[0], cases[i][1] + current[1]]
+                        else:
+                            # probs[i] = self._T2[current[0], current[1], opt_action,
+                            #                     current[0], current[1]]
+                            probs[i] = 0.0
+                choices = [0,1,2,3,4]
+                if sum(probs) != 1.0:
+                    print('PROBS ERROR')
+                move = np.random.choice(choices, p=probs)
+                current = (cases[move][0] + current[0], cases[move][1] + current[1])
+            else:
+                if current == goal:
+                    successes += 1
+                    print('Successfully made it to goal on iteration {}'.format(cnt+1))
+                else:
+                    print('Failed by landing in {} on iteration {}'.format(current, cnt+1))
+            cnt+=1
+        else:
+            print('Successful tries: {}/{}'.format(successes, iterations))
+
 
