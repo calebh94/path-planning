@@ -255,7 +255,7 @@ class GridWorldMDP:
         plt.xlim([-0.5, policy_grid.shape[1]-0.5])
 
 
-    def sim_best_policy(self, start, goal, traps, best_policy, iterations=50):
+    def sim_best_policy(self, start, goal, traps, best_policy, utility_grid, iterations=50):
         print('todo')
         cnt = 0
         successes = 0
@@ -263,6 +263,7 @@ class GridWorldMDP:
         while cnt < iterations:
             # print('coding;')
             current = start
+            reward = 0
             while current not in traps and current != goal:
                 if current is start:
                     probs = [0.5,0.5,0,0,0]
@@ -283,12 +284,13 @@ class GridWorldMDP:
                     print('PROBS ERROR')
                 move = np.random.choice(choices, p=probs)
                 current = (cases[move][0] + current[0], cases[move][1] + current[1])
+                reward = reward + utility_grid[current[0],current[1]]
             else:
                 if current == goal:
                     successes += 1
-                    print('Successfully made it to goal on iteration {}'.format(cnt+1))
+                    print('Iteration {}: Successfully made it to goal {} with reward {}'.format(cnt+1,goal, reward))
                 else:
-                    print('Failed by landing in {} on iteration {}'.format(current, cnt+1))
+                    print('Iteration {}: Failed by landing in {} with reward'.format(cnt+1,current, reward))
             cnt+=1
         else:
             print('Successful tries: {}/{}'.format(successes, iterations))
