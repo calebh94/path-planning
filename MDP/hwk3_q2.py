@@ -1,6 +1,9 @@
 from util_mdp import GridWorldMDP
 import numpy as np
 import matplotlib.pyplot as plt
+import time
+from memory_profiler import profile
+
 
 
 def plot_convergence(utility_grids, policy_grids):
@@ -14,8 +17,8 @@ def plot_convergence(utility_grids, policy_grids):
     ax2.plot(policy_changes, 'r.-')
     ax2.set_ylabel('Change in Best Policy', color='r')
 
-
-if __name__ == '__main__':
+@profile
+def hwk3():
     shape = (7, 8)
     goal = (1, 7)
     start = (6, 0)
@@ -29,7 +32,7 @@ if __name__ == '__main__':
     goal_reward = 10.0
     trap_reward = -10.0
     special_reward = default_reward  # CHANGE FOR PART B
-    # special_reward = 100.0 # CHANGE FOR PART B
+    # special_reward = -3.0 # CHANGE FOR PART B
 
 
     reward_grid = np.zeros(shape) + default_reward
@@ -78,16 +81,23 @@ if __name__ == '__main__':
     
     # CHOOSE CASE AND SOLVER HERE
     mdp_solvers = {'Value Iteration': gw.run_value_iterations}
-                   # 'Policy Iteration': gw2.run_policy_iterations}
+    # mdp_solvers = {'Policy Iteration': gw.run_policy_iterations}
 
     for solver_name, solver_fn in mdp_solvers.items():
         print('Final result of {}:'.format(solver_name))
+        t0 = time.time()
         policy_grids, utility_grids = solver_fn(iterations=100, discount=0.95)
+        t1 = time.time()
         print(policy_grids[:, :, -1])
         print(utility_grids[:, :, -1].round())
+        print('Time taken:  {}'.format(t1-t0))
         plt.figure()
         gw.plot_policy(utility_grids[:, :, -1])
         plot_convergence(utility_grids, policy_grids)
         plt.show()
 
         gw.sim_best_policy(start, goal, traps, policy_grids[:,:,-1], reward_grid, iterations=50)
+
+
+if __name__ == '__main__':
+    hwk3()
