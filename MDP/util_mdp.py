@@ -56,7 +56,9 @@ class GridWorldMDP:
         utility_grid = np.zeros_like(self._reward_grid)
         for i in range(iterations):
             utility_grid = self._value_iteration(utility_grid=utility_grid)
+            # policy_grids[:, :, i] = self.best_policy(utility_grid)
             policy_grids[:, :, i] = self.best_policy(utility_grid)
+
             utility_grids[:, :, i] = utility_grid
 
             # delta = 0
@@ -116,6 +118,23 @@ class GridWorldMDP:
         M, N = self.shape
         return np.argmax((utility_grid.reshape((1, 1, 1, M, N)) * self._T2)
                          .sum(axis=-1).sum(axis=-1), axis=2)
+
+    # def bestest_policy(self, utility_grid):
+    #     M,N = self.shape
+    #     policy_choice = np.empty([M,N])
+    #     for i in range(0,M):
+    #         for j in range(0,N):
+    #             choices = []
+    #             probs = []
+    #             for action in range(0,self._num_actions):
+    #                 dr,dc = self._direction_deltas[action]
+    #                 if 0 <= i+dr < M and 0 <= j+dc < N:
+    #                     # probs.append = self._T2[i,j,action,i+dr,j+dc]
+    #                     choices.append(utility_grid[i+dr,j+dc])
+    #                 else:
+    #                     choices.append(-1000)
+    #             policy_choice[i,j] = np.argmax(choices)
+    #     return policy_choice
 
     def _init_utility_policy_storage(self, depth):
         M, N = self.shape
@@ -207,6 +226,7 @@ class GridWorldMDP:
             else:
                 (self._T[row, col, :, w, :, :]).fill(0)
         self._T2[row, col, :, :, :] = self._T[row, col, :,dist,:,:]
+        # self._T2[row,col, :]
         return np.max(
             discount * np.sum(
                 np.sum(self._T[row, col, :, dist, :, :] * utility_grid,

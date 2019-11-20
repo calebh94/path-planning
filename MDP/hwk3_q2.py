@@ -34,7 +34,6 @@ def hwk3():
     special_reward = default_reward  # CHANGE FOR PART B
     # special_reward = -3.0 # CHANGE FOR PART B
 
-
     reward_grid = np.zeros(shape) + default_reward
     reward_grid[goal] = goal_reward
 
@@ -56,16 +55,16 @@ def hwk3():
 
     obstacle_mask = np.zeros_like(reward_grid, dtype=np.bool)
 
-    for obstacle in obstacles:
-        obstacle_mask[obstacle] = True
+    # for obstacle in obstacles:
+    #     obstacle_mask[obstacle] = True
 
     disturbance_directions = [[-1,2,2,1,0,-1,0,2],
-                              [3,1,1,2,3,3,3,-1],
+                              [3,1,1,2,3,3,3,0],
                               [0,1,2,-1,2,2,3,3],
                               [0,3,2,-1,-1,1,1,-1],
                               [1,-1,0,2,1,2,0,3],
                               [0,-1,1,0,0,-1,0,2],
-                              [-1,1,1,0,3,-1,0,3]]
+                              [0,1,1,0,3,-1,0,3]]
 
     gw = GridWorldMDP(reward_grid=reward_grid,
                       obstacle_mask=obstacle_mask,
@@ -78,11 +77,31 @@ def hwk3():
                       ],
                       disturbances=disturbance_directions,
                       no_action_probability=0.0)
+
+    # gw2 = GridWorldMDP(reward_grid=reward_grid2,
+    #                   obstacle_mask=obstacle_mask,
+    #                   terminal_mask=terminal_mask,
+    #                   # action_probabilities=[
+    #                   #     (-1, 0.1),
+    #                   #     (0, 0.8),
+    #                   #     (1, 0.1),
+    #                   # ],
+    #                   action_probabilities=[
+    #                       # ('WithWind', [0.75,0.10,0.10,0.05]),
+    #                       # ('AgainstWind', [0.05,0.20,0.20,0.55]),
+    #                       # ('SideWindR', [0.20,0.60,0.05,0.15]),
+    #                       #  ('SideWindL', [0.20, 0.60, 0.05, 0.15])
+    #                       (0, [0.75, 0.10, 0.10, 0.05]),
+    #                       (1, [0.20, 0.60, 0.05, 0.15]),
+    #                       (2, [0.05, 0.20, 0.20, 0.55]),
+    #                       (3, [0.20, 0.60, 0.05, 0.15])
+    #                   ],
+    #                   disturbances=disturbance_directions,
+    #                   no_action_probability=0.0)
     
     # CHOOSE CASE AND SOLVER HERE
     mdp_solvers = {'Value Iteration': gw.run_value_iterations}
     # mdp_solvers = {'Policy Iteration': gw.run_policy_iterations}
-
     for solver_name, solver_fn in mdp_solvers.items():
         print('Final result of {}:'.format(solver_name))
         t0 = time.time()
